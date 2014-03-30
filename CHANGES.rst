@@ -1,6 +1,12 @@
 Changelog
 =========
 
+2.3.2 (unreleased)
+------------------
+
+- Nothing changed yet.
+
+
 2.3.2-ajaxify (2014-03-30)
 --------------------------
 
