@@ -1,8 +1,8 @@
 Changelog
 =========
 
-2.3.2 (unreleased)
-------------------
+2.3.2-ajaxify (2014-03-30)
+--------------------------
 
 - Merge master and Ajax-UI by thomasdesvenain and silviot
   [maartenkling]
