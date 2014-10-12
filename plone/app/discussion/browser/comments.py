@@ -37,6 +37,7 @@ from plone.app.discussion.interfaces import IDiscussionSettings
 from plone.app.discussion.interfaces import ICaptcha
 
 from plone.app.discussion.browser.validator import CaptchaValidator
+from z3c.form.browser.checkbox import CheckBoxFieldWidget
 
 from plone.z3cform import z2
 from plone.z3cform.fieldsets import extensible
@@ -111,9 +112,44 @@ class CommentForm(extensible.ExtensibleForm, form.Form):
 
         # Anonymous / Logged-in
         mtool = getToolByName(self.context, 'portal_membership')
-        if not mtool.isAnonymousUser():
+        anon = mtool.isAnonymousUser()
+
+        registry = queryUtility(IRegistry)
+        settings = registry.forInterface(IDiscussionSettings, check=False)
+
+        member = mtool.getAuthenticatedMember()
+        member_email = member.getProperty('email')
+        member_name = member.getProperty('fullname')
+
+        #XXX there is a big problem here when having loggedin and
+        # not loggind in people viewing
+
+        #if anon:
+        #    if settings.anonymous_email_enabled:
+        #        # according to IDiscussionSettings.anonymous_email_enabled:
+        #        # "If selected, anonymous user will have to give their email."
+        #        self.widgets['author_email'].field.required = True
+        #        self.widgets['author_email'].required = True
+        #        self.widgets['author_name'].field.required = True
+        #        self.widgets['author_name'].required = True
+        #    else:
+        #        self.widgets['author_email'].mode = interfaces.HIDDEN_MODE
+        #else:
+
+        # possible when admin or some zope user or so
+        if not anon and (member_email and member_name):
             self.widgets['author_name'].mode = interfaces.HIDDEN_MODE
             self.widgets['author_email'].mode = interfaces.HIDDEN_MODE
+            self.widgets['comment_nieuwsbrief'].mode = interfaces.HIDDEN_MODE
+            #self.fields["comment_nieuwsbrief"].widgetFactory = \
+            #    CheckBoxFieldWidget
+            #self.widgets["comment_nieuwsbrief"].value = ""
+
+        if member_name:
+            # set default values when loggedin
+            self.widgets['author_name'].value = member_name
+        if member_email:
+            self.widgets['author_email'].value = member_email
 
         registry = queryUtility(IRegistry)
         settings = registry.forInterface(IDiscussionSettings, check=False)
@@ -121,15 +157,12 @@ class CommentForm(extensible.ExtensibleForm, form.Form):
         if mtool.isAnonymousUser() and not settings.anonymous_email_enabled:
             self.widgets['author_email'].mode = interfaces.HIDDEN_MODE
 
-        member = mtool.getAuthenticatedMember()
-        member_email = member.getProperty('email')
-
         # Hide the user_notification checkbox if user notification is disabled
         # or the user is not logged in. Also check if the user has a valid
         # email address
         member_email_is_empty = member_email == ''
         user_notification_disabled = not settings.user_notification_enabled
-        anon = mtool.isAnonymousUser()
+
         if member_email_is_empty or user_notification_disabled or anon:
             self.widgets['user_notification'].mode = interfaces.HIDDEN_MODE
 
@@ -182,6 +215,10 @@ class CommentForm(extensible.ExtensibleForm, form.Form):
         # Set comment mime type to current setting in the discussion registry
         comment.mime_type = settings.text_transform
 
+        # setting value is failing so remove any value here when loggedin user
+        if not anon:
+            data["comment_nieuwsbrief"] = False
+
         # Set comment attributes (including extended comment form attributes)
         for attribute in self.fields.keys():
             setattr(comment, attribute, data[attribute])
@@ -190,6 +227,10 @@ class CommentForm(extensible.ExtensibleForm, form.Form):
             author_name = data['author_name']
             if isinstance(author_name, str):
                 author_name = unicode(author_name, 'utf-8')
+        if 'author_email' in data:
+            author_email = data['author_email']
+            if isinstance(author_email, str):
+                author_email = unicode(author_email, 'utf-8')
 
         # Set comment author properties for anonymous users or members
         can_reply = getSecurityManager().checkPermission('Reply to item',
@@ -198,7 +239,7 @@ class CommentForm(extensible.ExtensibleForm, form.Form):
         if anon and anonymous_comments:
             # Anonymous Users
             comment.author_name = author_name
-            comment.author_email = u""
+            comment.author_email = author_email
             comment.user_notification = None
             comment.creation_date = datetime.utcnow()
             comment.modification_date = datetime.utcnow()
@@ -266,6 +307,9 @@ class CommentForm(extensible.ExtensibleForm, form.Form):
         elif not is_ajax:
             # Redirect to comment (inside a content object page)
             self.request.response.redirect(self.action + '#' + str(comment_id))
+
+        IStatusMessage(self.context.REQUEST).addStatusMessage(
+            _("A comment has been posted."), type="info")
 
     @button.buttonAndHandler(_(u"Cancel"))
     def handleCancel(self, action):
@@ -444,6 +488,13 @@ class CommentsBase(object):
                                           'portal_membership',
                                           None)
         return portal_membership.isAnonymousUser()
+
+    def show_email(self, reply):
+        has_author_email = reply.author_email
+        may_review = getSecurityManager().checkPermission(
+            'Review comments', self.context
+        )
+        return may_review and has_author_email
 
     def login_action(self):
         return '%s/login_form?came_from=%s' % \

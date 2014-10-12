@@ -234,7 +234,7 @@
             });
         })
 
-        $('#commenting form input[type=submit]').unbind('click').click(function(){
+        $('body.userrole-member #commenting form input[type=submit]').unbind('click').click(function(){
             var form = $(this).parents('form:first');
             var textarea = form.find('textarea');
             if($.trim(textarea.attr('value'))=='') return false;
@@ -244,8 +244,9 @@
             $.post(url, data, function(html){
                 /* Displays an info message (only one) if it exists */
                 $(html).find('#info-message').each(function(){
-                    $('#kssPortalMessage').find('dd').html($(this).text());
-                    $('#kssPortalMessage').show();
+                    $('#info-message-placeholder').html($(this).text());
+                    $('#info-message-placeholder').show();
+                    $('#info-message-placeholder').removeClass('hide');
                 });
                 $('#plone-app-discussion-comments').html(html);
                 afterCommentsLoad();

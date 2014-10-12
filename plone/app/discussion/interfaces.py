@@ -122,6 +122,23 @@ class IReplies(IIterableMapping):
         """Delete the comment with the given key. The key is a long id.
         """
 
+from zope.schema import ValidationError
+
+
+class InvalidEmailAddress(ValidationError):
+    "Invalid emailadres"
+
+from Products.CMFDefault.utils import checkEmailAddress
+from Products.CMFDefault.exceptions import EmailAddressInvalid
+
+
+def validateaddress(value):
+    try:
+        checkEmailAddress(value)
+    except EmailAddressInvalid:
+        raise InvalidEmailAddress(value)
+    return True
+
 
 class IComment(Interface):
     """A comment.
@@ -151,8 +168,11 @@ class IComment(Interface):
     author_username = schema.TextLine(title=_(u"Name"), required=False)
 
     # for anonymous comments only, set to None for logged in comments
-    author_name = schema.TextLine(title=_(u"Name"), required=False)
-    author_email = schema.TextLine(title=_(u"Email"), required=False)
+    author_name = schema.TextLine(title=_(u"Name"), required=True,
+                                  description=_(u"help_name", default=""))
+    author_email = schema.TextLine(title=_(u"Email"), required=True,
+                                   description=_(u"help_email", default=""),
+                                   constraint=validateaddress)
 
     title = schema.TextLine(title=_(u"label_subject",
                                     default=u"Subject"))
@@ -180,7 +200,8 @@ class IComment(Interface):
 class ICaptcha(Interface):
     """Captcha/ReCaptcha text field to extend the existing comment form.
     """
-    captcha = schema.TextLine(title=u"Captcha",
+    captcha = schema.TextLine(title=_(u"label_captcha",
+                                      default="Captcha"),
                               required=False)
 
 

@@ -75,6 +75,13 @@ Changelog
   [toutpt]
 
 
+2.2.12 (unreleased)
+-------------------
+
+- Show author email to Moderator when it is available in anonymous comment.
+  [gotcha, smoussiaux]
+
+
 2.2.10 (2013-09-24)
 -------------------
 
