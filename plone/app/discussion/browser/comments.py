@@ -74,6 +74,8 @@ try:
 except ImportError: # pragma: no cover
     HAS_WRAPPED_FORM = False
 
+from Products.CMFPlone.utils import safe_unicode
+
 
 class CommentForm(extensible.ExtensibleForm, form.Form):
 
@@ -147,9 +149,9 @@ class CommentForm(extensible.ExtensibleForm, form.Form):
 
         if member_name:
             # set default values when loggedin
-            self.widgets['author_name'].value = member_name
+            self.widgets['author_name'].value = safe_unicode(member_name)
         if member_email:
-            self.widgets['author_email'].value = member_email
+            self.widgets['author_email'].value = safe_unicode(member_email)
 
         registry = queryUtility(IRegistry)
         settings = registry.forInterface(IDiscussionSettings, check=False)
